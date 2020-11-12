@@ -1,56 +1,15 @@
-
-"""
-def f(a, q):
-...     q()
-...
->>> f(True, lambda: (
-... print(1),
-... d := 10,
-... print(d)
-... ))
-1
-10
->>>
-
-"""
 # Definition
-#   class Tree: pass
-#   class Leaf(a): pass
-#   class _Tree(a, a): pass
-
-class Bool:
-    is_bool = lambda self, o: o.__class__ in [tRue, fAlse]
-class tRue(Bool): pass
-class fAlse(Bool): pass
 
 def data_args(clazz):
-    return list(filter(lambda s: not (s is clazz or s is object), clazz.__mro__))
+    return list(
+        filter(
+            lambda s: not (
+                s is clazz or s is object
+            ), 
+            clazz.__mro__
+        )
+    )
 
-#   data("Bool").either("T", "F")
-#   data("Tree").either("T", "F")
-def when(self, structure): pass
-
-# Usage
-# Bool case
-"""
-case(obj).when(
-  T, lambda: (
-      'a',
-      'z',
-      'w',
-      's',
-      't',
-  )
-).when(
-  F, lambda: (
-      'a',
-      'z',
-      'w',
-      's',
-      't',
-  )
-)
-"""
 def loop(cond, code, arg):
     while cond(arg):
         arg = code(arg)
@@ -60,13 +19,6 @@ def if_then_else(cond, code_if_true, code_if_not):
         code_if_true()
     else:
         code_if_not()
-
-# Regular loop:
-def from_one_to_10():
-    n = 1
-    while n < 11:
-        print(n)
-        n += 1
 
 # encoded loop
 
@@ -79,13 +31,6 @@ def from_one_to_10():
      )[1], n)
 ))()
 
-# Regular if then else:
-def f(n):
-    if n > 0:
-        print("YES")
-    else:
-        print("NO")
-
 # encoded if then else
 (lambda n: (
  cond := n < 11,
@@ -96,14 +41,38 @@ def f(n):
  ))
 ))(10)
 
-class case:
-    def __init__(self, obj): pass
-    def when(self, obj, do=None): return self
+
+class BinT:
+    def __init__(self, x, fg=None, fd=None):
+        self.content = x
+        self.fg = fg
+        self.fd = fd
+
+    def __str__(self):
+        cnt = str(self.content)
+        if self.fg == self.fd == None:
+            return 'Leaf(' + str(cnt) + ')'
+        return "Tree(" + cnt + ", " +  str(self.fg) + ", " + str(self.fd) + ")"
+
+    def to_prefix(self):
+        if self.fg == self.fd == None:
+            return [self.content]
+        return [self.content, self.fg.to_prefix(), self.fd.to_prefix()]
+
+    def __eq__(self, other):
+        return self.to_prefix() == other.to_prefix()
+
+    __repr__ = __str__
+
 #Tree case:
+
+"""
 obj = 10
 case(obj).when(
   Leaf(), do=lambda: (
       print("Got a Leaf"),
+      print("Got a Leaf"),
+      print("Got a Leaf")
   )
 ).when(
   Leaf(a=10), do=lambda: (
@@ -111,17 +80,17 @@ case(obj).when(
       print(f"It is cool")
   )
 ).when(
-  _Tree(_Tree(Leaf(1), Leaf(2)), _Tree(Leaf(1), Leaf(2))), do=lambda: (
+   # The structure analyzer is expected here ...
+  _Tree(0, _Tree(10, Leaf(1), Leaf(2)), _Tree(9, Leaf(1), Leaf(2))), do=lambda: (
       print("A forest"),
-      print("That is great!"),
+      print("This is great!"),
       print("Nope"),
   )
 ).when(
-  _Tree(Leaf(10), Leaf(9))
+  _Tree(Leaf(), Leaf())
 )
+"""
 
 # Output scenario:
 #   -> non-exausted pattern matching
 #   -> exception occuring
-#   ->
-#   -> non-exausted pattern matching
