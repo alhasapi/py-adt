@@ -9,6 +9,11 @@ AT = 'attr_'
 #            +- Wilicards
 #            
 
+
+
+# Addressing the willicard issue:
+_ = 'any'
+
 def map_(fn, cl):
     return list(map(fn, cl))
 
@@ -26,55 +31,83 @@ class case:
                         pass
             if do: 
                 do()
+class match:
+    def __init__(self, obj):
+        self.obj = obj
+    def when(self, p_obj, do=None): # return self
+        if self.obj.__class__ is p_obj.__class__:
+            if self.obj.ego >> p_obj.ego:
+                if p_obj.__dict__:
+                    globals().update(p_obj.__dict__)
+                do()
+        if p_obj.kwargs: 
+            globals().update({
+                o:self.obj.ego.kids[subtree_idx - 1].data 
+                    for o, subtree_idx in p_obj.kwargs.items()
+            })
 
 def Term(*args):
      argsize = len(args)
-     def wrapper(*ag):
-         if argsize + 1 != len(ag):
+     def wrapper(*ag, **kargs):
+         if argsize + 1 != len(ag) + len(kargs):
              raise TypeError(f"Expecting {argsize} positional arguments not {len(ag) - 1}.")
-         def __init__(self, *arguments):
+
+         def __init__(self, *arguments, **kwargs):
              issues = []
              for (n, obj) in enumerate(zip(args, arguments)):
                  clz, ins = obj
-                 if clz is type:
-                     continue
+                 if str(ins) == _: continue
+                 if clz is type: continue
                  if ins.__class__ != clz:
-                     print("--->", ins, clz.__name__)
                      issues.append(f"argument {n + 1} must be a {clz.__qualname__}")
              if issues:
-                 raise TypeError(' and '.join(issues))
+                 raise TypeError(' and '.join(issues)) 
+
              for (k, arg) in enumerate(arguments):
-                 setattr(self, '_'+str(k), arg)  
+                 setattr(self, '_'+str(k), arg)
+
+             for s in range(k+1, len(kwargs)+1):
+                 setattr(self, '_'+str(s), _)
+
              items = list(self.__dict__.values())
-             self.ego = O(items.pop(0), [O(z, []) for z in items ])
-         return __init__(*ag)
+             self.ego = O(items.pop(0), [O(z, []) for z in items if getattr(z, 'argsize', False)]) 
+             self.kwargs = {m: idx for m, idx in zip(kwargs, range(k+1, len(kwargs)+1))}
+         return __init__(*ag, **kargs)
+
+     def __repr__(self):
+         clz_nm = self.__class__.__name__ + '('
+         for i in range(argsize):
+            q = getattr(self, '_'+str(i))
+            q = q.__name__ if hasattr(q, 'mro') else repr(q)
+            if q == repr(_):
+                clz_nm += '_'
+            else: 
+                clz_nm += q
+            clz_nm += ', '
+         return clz_nm[:-2] + ')'
 
      def __str__(self):
          return str(self.ego)
-     def __eq__(self, other):
-         return self.ego == other.ego
 
-     def __mt__(self, other):
-         # if reached eq, good!
-         #
-         pass
-     return type("", (object,), { '__init__' : wrapper, 'argsize': argsize, '__str__': __str__, '__repr__': __str__ })
+     __eq__ = lambda self, other: self.ego == other.ego
+     return type(f"ADT_{argsize}_CLAZZ", (object,), {
+                                 '__init__' : wrapper, 
+                                 'argsize': argsize, 
+                                 '__str__': __str__, 
+                                 '__eq__': __eq__,
+                                 '__repr__': __repr__ })
 
 def adt(clz):
     annots = clz.__annotations__
     for clz_n in annots:
         annots[clz_n].__name__     = clz_n
         annots[clz_n].__qualname__ = clz_n
-    print(clz.__dict__)
+    #print(clz.__dict__)
     globals().update(clz.__annotations__)
     return clz
 
 # The most suitable representation of an ADT is
 # a tree-like structure with n-1 first-level ramifications 
-
-def melt_adt_to_tree(obj):
-    items = list(obj.__dict__.items())
-    return 
     
 @adt
 class List: 
@@ -105,11 +138,12 @@ class __Logos__(type):
 def generate_show(arg): pass
 
 class O(object):
-    def __init__(self, data,  kids):
+    def __init__(self, data, kids):
         self.data = data
         self.kids = kids
         assert isinstance(kids, list)
-    __str__  = lambda self: f"{self.__class__.__name__}({self.data}, [{','.join(map_(str, self.kids))}])"
+    __str__  = lambda self: \
+        f"{self.__class__.__name__}({'_' if str(self.data) == _ else self.data}, [{', '.join(map_(str, self.kids))}])"
     __repr__ = __str__
 
     def __eq__(self, other):
@@ -119,9 +153,12 @@ class O(object):
         )
 
     def __mt__(self, other):
-        pass
-
-
+        zq = lambda u, z: (u.data == z.data or str(z.data) == _)
+        return zq(self, other) and all(zq(z, u) and 
+                                         all(s >> w 
+                                             for (s, w) in zip(z.kids, u.kids))
+                                                         for (u, z) in zip(self.kids, other.kids))
+    __rshift__ = __mt__
 
 @adt
 class List: 
@@ -136,7 +173,7 @@ def size(q : List) -> int:
     res = case(q).when(
       Nil, do=lambda: 0
     ).when(
-      Cons(a, rem), do=lambda: 1 + size(rem)
+      Cons(_, rem), do=lambda: 1 + size(rem)
     )
     return res
 
@@ -158,4 +195,3 @@ class Tree(A):
     FG   = Term(Tree(A))
     FD   = Term(Tree(A))
 """
-
