@@ -8,9 +8,6 @@ AT = 'attr_'
 #       + Structure identity: 
 #            +- Wilicards
 #            
-
-
-
 # Addressing the willicard issue:
 _ = 'any'
 
@@ -31,20 +28,30 @@ class case:
                         pass
             if do: 
                 do()
+
+def yieldtree(*alfas):
+    def qz(alf):
+        if hasattr(alf, 'ego'):
+            return alf.ego
+        elif alf.__class__ == O:
+            return alf
+        return O(alf, [])
+    return [qz(alf) for alf in alfas]
+
 class match:
     def __init__(self, obj):
         self.obj = obj
     def when(self, p_obj, do=None): # return self
         if self.obj.__class__ is p_obj.__class__:
             if self.obj.ego >> p_obj.ego:
+                if p_obj.kwargs: 
+                    globals().update({
+                        o:self.obj.ego.kids[subtree_idx - 1].data 
+                            for o, subtree_idx in p_obj.kwargs.items()
+                    })
                 if p_obj.__dict__:
                     globals().update(p_obj.__dict__)
                 do()
-        if p_obj.kwargs: 
-            globals().update({
-                o:self.obj.ego.kids[subtree_idx - 1].data 
-                    for o, subtree_idx in p_obj.kwargs.items()
-            })
 
 def Term(*args):
      argsize = len(args)
@@ -70,7 +77,16 @@ def Term(*args):
                  setattr(self, '_'+str(s), _)
 
              items = list(self.__dict__.values())
-             self.ego = O(items.pop(0), [O(z, []) for z in items if getattr(z, 'argsize', False)]) 
+             self.ego2 = yieldtree(*items)
+             self.ego = O(items.pop(0), [])
+             for z in items:
+                 if getattr(z, 'argsize', False):
+                     if hasattr(z, 'ego'):
+                         self.ego.kids.append(z)
+                     elif z.__class__ != O:
+                         self.ego.kids.append(O(z, []))
+                     else:
+                         self.ego.kids.append(z)
              self.kwargs = {m: idx for m, idx in zip(kwargs, range(k+1, len(kwargs)+1))}
          return __init__(*ag, **kargs)
 
@@ -160,11 +176,14 @@ class O(object):
                                                          for (u, z) in zip(self.kids, other.kids))
     __rshift__ = __mt__
 
+
+
+
 @adt
 class List: 
     Nil  : Term()
     Cons : Term(type, type)
-#    def Cons(a : type, l : Term(List(type))) -> Term(List(type)): pass
+#   def Cons(a : type, l : Term(List(type))) -> Term(List(type)): pass
 
 def check(fn): pass
 
