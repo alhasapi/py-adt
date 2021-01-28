@@ -38,20 +38,33 @@ def yieldtree(*alfas):
         return O(alf, [])
     return [qz(alf) for alf in alfas]
 
+def level(x): pass
+    
 class match:
     def __init__(self, obj):
+        self.res = None
         self.obj = obj
+    unwrap = lambda self: self.res
     def when(self, p_obj, do=None): # return self
         if self.obj.__class__ is p_obj.__class__:
-            if self.obj.ego >> p_obj.ego:
+            if p_obj.argsize == 0:
+                print("-->")
+                self.res = do()
+            elif self.obj.ego >> p_obj.ego:
                 if p_obj.kwargs: 
+                    print(self.obj.ego)
+                    print(self.obj.ego2)
                     globals().update({
-                        o:self.obj.ego.kids[subtree_idx - 1].data 
+                        o:self.obj.ego2[subtree_idx - 1]
                             for o, subtree_idx in p_obj.kwargs.items()
                     })
-                if p_obj.__dict__:
-                    globals().update(p_obj.__dict__)
-                do()
+                    #if p_obj.__dict__:
+                    #   globals().update(p_obj.__dict__)
+                    self.res = do()
+        print("obj", self.obj)
+        print("p_obj", p_obj)
+        print("res",self.res)
+        return self
 
 def Term(*args):
      argsize = len(args)
@@ -60,6 +73,7 @@ def Term(*args):
              raise TypeError(f"Expecting {argsize} positional arguments not {len(ag) - 1}.")
 
          def __init__(self, *arguments, **kwargs):
+
              issues = []
              for (n, obj) in enumerate(zip(args, arguments)):
                  clz, ins = obj
@@ -67,6 +81,7 @@ def Term(*args):
                  if clz is type: continue
                  if ins.__class__ != clz:
                      issues.append(f"argument {n + 1} must be a {clz.__qualname__}")
+
              if issues:
                  raise TypeError(' and '.join(issues)) 
 
@@ -78,13 +93,18 @@ def Term(*args):
 
              items = list(self.__dict__.values())
              self.ego2 = yieldtree(*items)
-             self.ego = O(items.pop(0), [])
+             fst = items.pop(0)
+             self.ego = O(fst, [])
              for z in items:
                  if getattr(z, 'argsize', False):
                      if hasattr(z, 'ego'):
                          self.ego.kids.append(z)
                      elif z.__class__ != O:
-                         self.ego.kids.append(O(z, []))
+                         if hasattr(z, 'argsize'):
+                             if z.argsize == 0:
+                                 self.ego.kids.append(z)
+                         else:
+                             self.ego.kids.append(O(z, []))
                      else:
                          self.ego.kids.append(z)
              self.kwargs = {m: idx for m, idx in zip(kwargs, range(k+1, len(kwargs)+1))}
@@ -113,28 +133,10 @@ def Term(*args):
                                  '__eq__': __eq__,
                                  '__repr__': __repr__ })
 
-def adt(clz):
-    annots = clz.__annotations__
-    for clz_n in annots:
-        annots[clz_n].__name__     = clz_n
-        annots[clz_n].__qualname__ = clz_n
-    #print(clz.__dict__)
-    globals().update(clz.__annotations__)
-    return clz
 
 # The most suitable representation of an ADT is
 # a tree-like structure with n-1 first-level ramifications 
     
-@adt
-class List: 
-    Nil  : Term()
-    Cons : Term(type, type)
-
-@adt
-class Tree:
-    Leaf : Term(int)
-    Node : Term(int, type, type)
-
 class __Logos__(type):
      def __new__(cls, name, bases, dictionary):
          anns = dictionary['__annotations__']
@@ -175,42 +177,3 @@ class O(object):
                                              for (s, w) in zip(z.kids, u.kids))
                                                          for (u, z) in zip(self.kids, other.kids))
     __rshift__ = __mt__
-
-
-
-
-@adt
-class List: 
-    Nil  : Term()
-    Cons : Term(type, type)
-#   def Cons(a : type, l : Term(List(type))) -> Term(List(type)): pass
-
-def check(fn): pass
-
-@check
-def size(q : List) -> int:
-    res = case(q).when(
-      Nil, do=lambda: 0
-    ).when(
-      Cons(_, rem), do=lambda: 1 + size(rem)
-    )
-    return res
-
-"""
-class List:
-    Nil  = Term()
-    Cons = Term(type, List(type))
-
-@adt
-class List: 
-    Nil  : Term()
-    Cons : Term(type, List(type))
-
-Cons("A", Cons("B", Cons("C", Nil)))
-
-List.fromList([10])
-class Tree(A):
-    Leaf = Term(A)
-    FG   = Term(Tree(A))
-    FD   = Term(Tree(A))
-"""
