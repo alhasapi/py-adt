@@ -6,10 +6,6 @@ class List:
     Nil  : Term()
     Cons : Term(type, type)
 
-def abc():
-    print("---->", rem)
-    return 1 + size(rem)
-
 def size(q : List) -> int:
     res = match(q).when(
       Nil, do=lambda: 0
