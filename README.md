@@ -1,5 +1,4 @@
 # py-adt
-
 Trying to implement something close to Algebraic Data Types and pattern matching in Python, with syntax similar to this.
 
 ```python
@@ -15,8 +14,22 @@ def size(q : List) -> int:
       Cons(_, rem=_), do=lambda: 1 + size(rem)
     ).unwrap()
     return res
-    
-    
+```
+For sum types, for example the the state of sky:
+```python
+@adt
+class SkyState:
+    CLOUDY : Term()
+    SUNNY  : Term()
+    RAINNY : Term()
+```
+For product types, lets have a record of person:
+```python
+@adt
+class Person:
+    P : Term(name : str, age : int)
+```
+```python
 @adt
 class Tree: 
     Leaf  : Term()
